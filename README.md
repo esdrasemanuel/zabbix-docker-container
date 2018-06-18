@@ -66,3 +66,121 @@ Alguns prints da execução do script.
 ![img2](img/04.png)
 
 ![img2](img/05.png)
+
+Para executar o script `monitorizando_auto.sh` necessitamos realizar algumas configurações no frontend do zabbix, tambem existe algumas pendencias no arquivo de configuração do zabbix `/etc/zabbix/zabbix_server.conf` que são:
+
+Adicionar a linha
+```
+SSHKeyLocation=/var/lib/zabbix//.ssh
+```
+Criar o diretório:
+```
+sudo mkdir -p /var/lib/zabbix//.ssh
+```
+Copiar o arquivo `known_hosts` para `/var/lib/zabbix//.ssh`
+```
+sudo cp .ssh/known_hosts /var/lib/zabbix//.ssh/
+```
+Reiniciar o zabbix:
+```
+sudo service zabbix-server restart
+```
+É necessário dar algumas permissões para o usuário `zabbix` ou mudar o dono de alguns arquivos e diretórios, no nosso caso vamos mudar o dono. Dentro do diretório deste porjeto terá dois arquivo `.txt` e um diretório `relatórios` que devemos mudar o dono.
+```
+sudo chown zabbix dados.txt estado_atual.txt
+```
+```
+sudo chown -R zabbix relatorios
+```
+Além disso, usamos o `/var/www/` para criar uma pagina html e a partir dela gerar um pdf então devemos mudar o dono.
+```
+sudo chown -R zabbix /var/www
+```
+Depois de realizar todas essas configurações, agora podemos realizar as demais configurações de monitorização.
+
+Criando Grupo:
+
+![img2](img/06.png)
+
+Criando Host:
+
+![img2](img/07.png)
+
+Adicionando Variaveis Macros para o host:
+- `{$RELATORIO}` = 1 ativa, 0 desativa.
+- `{$PARAR}` = 1 ativa, 0 desativa.
+- `{$MAX}` = Qualquer container que esteja consumindo a memoria acima desse valor, poderá ser realizado Relatorio ou poderá ser parado (depende das variaveis acima).
+- `{$IP}` = IP da maquina alvo.
+- `{$USUARIO}` = Usuário da máquina alvo.
+- `{$SENHA}` = SENHA do usuário da máquina alvo.
+- `{$DIR}` = Caminho completo do diretório deste projeto
+
+Qualquer duvida execute o script pelo terminal passando apenas o argumento `-h`
+
+![img2](img/08.png)
+
+
+
+Criando Script
+
+Existe duas maneiras de adicionar o comando, umdas é utlizando a variavel macro `{$DIR}` e passando o script e os argumentos (que vamos entender durante este arquivo)
+
+Utilizando `.{$DIR}monitorizando_auto.sh [options] [args]`
+
+![img2](img/09.png)
+
+Utilizando o caminho completo `./homem/usuario/diretorio_prjeto/monitorizando_auto.sh [options] [args]`
+
+![img2](img/10.png)
+
+Atenção para as permissões requeridas pelo host.
+
+Criando Item:
+
+![img2](img/11.png)
+
+Este arquivo `consumo_total.txt` é criado no mesmo diretório em que é executado o `monitoring.sh` no host docker.
+
+Criando Trigger:
+
+![img2](img/12.png)
+
+O valor `15` é referente a porcentagem maxima de consumo de memoria (total) dos containers, ja a macro `{$MAX}` é referente a cada container separadamente e é a macro que será utilizada para fazer relatorio e/o parar container.
+
+Trigger Disparada:
+
+![img2](img/13.png)
+
+Executando Script:
+
+Clique no nome do host e aparecerar os scripts disponivel:
+
+![img2](img/14.png)
+
+Clique no script que criamos e ele será executado.
+
+Saida do Script:
+
+Nessa execução decidimos fazer apenas o relatorio dos containers como configuramos nas macros
+
+![img2](img/15.png)
+
+Caso desejamos parar os containers que estão consumindo a memória acima do valor da macro `{$MAX}`, devemos mudar o valor da macro `{$PARAR}` para 1, depois de realizarmos isso, execute o script novamente.
+
+Parando Containers:
+![img2](img/16.png)
+
+Nas figuras abaixo podemos ver o relatorio do container da primeira execução do script e o status do container da seguna execução, respectivamente.
+
+![img2](img/17.png)
+
+![img2](img/19.png)
+
+Entendendo as opções do Script:
+- -r ---> Para ativar ou não os relatórios, o valor 1 é ativo e o valor 0 é desativado.
+- -p ---> Para contêineres automaticamente, o valor 1 está ativo e o valor 0 está desativado.
+- -m ---> Para definir o uso máximo em porcentagem (inteiro) da memória de cada contêiner. contêineres usando memória acima desse valor serão interrompidos.
+- -i ---> IP da máquina alvo.
+- -u ---> Usuário da máquina alvo.
+- -s ---> Senha do usuário da máquina alvo.
+- -d ---> Caminho completo do diretório dos scripts (somente caminho) no servidor zabbix.
